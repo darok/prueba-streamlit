@@ -6,7 +6,7 @@ def get_conn():
     return sqlite3.connect("ventas.db")
 
 # ---- PESTAÑAS ----
-tab1, tab2 = st.tabs(["📋 Cargar venta", "📊 Ver registros"])
+tab1, tab2, tab3 = st.tabs(["📋 Cargar venta", "📊 Ver registros", "⚙️ Administrar"])
 
 # ---- PESTAÑA 1: CARGAR VENTA ----
 with tab1:
@@ -62,3 +62,48 @@ with tab2:
 
         st.subheader("Agregado anual")
         st.dataframe(df.groupby("año")["total"].sum().reset_index())
+
+# ---- PESTAÑA 3: ADMINISTRAR ----
+with tab3:
+    st.header("Administrar vendedores y productos")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Agregar vendedor")
+        nuevo_vendedor = st.text_input("Nombre del vendedor", key="nuevo_vendedor")
+        if st.button("Agregar vendedor"):
+            if nuevo_vendedor.strip():
+                conn = get_conn()
+                conn.execute("INSERT INTO vendedores (nombre) VALUES (?)", (nuevo_vendedor.strip(),))
+                conn.commit()
+                conn.close()
+                st.success(f"Vendedor '{nuevo_vendedor.strip()}' agregado.")
+                st.rerun()
+            else:
+                st.warning("Ingresá un nombre válido.")
+
+        conn = get_conn()
+        df_v = pd.read_sql("SELECT * FROM vendedores ORDER BY nombre", conn)
+        conn.close()
+        st.dataframe(df_v, hide_index=True)
+
+    with col2:
+        st.subheader("Agregar producto")
+        nuevo_producto = st.text_input("Nombre del producto", key="nuevo_producto")
+        nuevo_precio = st.number_input("Precio", min_value=0.0, value=0.0, step=0.01, key="nuevo_precio")
+        if st.button("Agregar producto"):
+            if nuevo_producto.strip() and nuevo_precio > 0:
+                conn = get_conn()
+                conn.execute("INSERT INTO productos (nombre, precio) VALUES (?, ?)", (nuevo_producto.strip(), nuevo_precio))
+                conn.commit()
+                conn.close()
+                st.success(f"Producto '{nuevo_producto.strip()}' agregado.")
+                st.rerun()
+            else:
+                st.warning("Ingresá un nombre y un precio mayor a 0.")
+
+        conn = get_conn()
+        df_p = pd.read_sql("SELECT * FROM productos ORDER BY nombre", conn)
+        conn.close()
+        st.dataframe(df_p, hide_index=True)
